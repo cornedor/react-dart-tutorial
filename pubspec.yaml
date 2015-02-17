@@ -1,0 +1,10 @@
+name: react_tutorial
+version: 0.0.1
+author: Corné Dorrestijn <corne.dorrestijn@gmail.com>
+description: React Dart Tutorial
+environment:
+  sdk: '>=1.0.0 <2.0.0'
+dependencies:
+  browser: any
+  markdown: any
+  react: any
