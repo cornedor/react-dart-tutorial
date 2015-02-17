@@ -62,9 +62,5 @@ class CommentBox extends Component {
 
 void main() {
   reactClient.setClientConfiguration();
-  var data = [
-      {'author': 'Pete Hunt', 'text': 'This is one comment'},
-      {'author': 'Jordan Walke', 'text': 'This is *another* comment'}
-  ];
   render(commentBox({'url': 'comments.json'}), querySelector('#content'));
 }
