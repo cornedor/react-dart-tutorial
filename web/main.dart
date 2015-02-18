@@ -1,5 +1,6 @@
-import 'dart:html';
+import 'dart:async';
 import 'dart:convert';
+import 'dart:html';
 
 import 'package:react/react_client.dart' as reactClient;
 import 'package:react/react.dart';
@@ -34,33 +35,76 @@ class CommentList extends Component {
 }
 
 class CommentForm extends Component {
+  get onCommentSubmit => props['onCommentSubmit'];
+  
+  void handleSubmit(SyntheticFormEvent e) {
+    e.preventDefault();
+    String author = ref('author').value;
+    String text = ref('text').value;
+    if(text.isEmpty || author.isEmpty) {
+      return;
+    }
+    
+    onCommentSubmit({'author': author, 'text': text});
+    
+    ref('author').value = '';
+    ref('text').value = '';
+  }
+  
   render() {
-    return div({'className': 'commentForm'}, 'Hello, world! I am a CommentForm');
+    return form({'className': 'commentForm', 'onSubmit': handleSubmit}, [
+        input({'type': 'text', 'placeholder': 'Your name', 'ref': 'author'}),
+        input({'type': 'text', 'placeholder': 'Say something...', 'ref': 'text'}),
+        input({'type': 'submit', 'value': 'Post'})
+    ]);
   }
 }
 
 class CommentBox extends Component {
   get url => props['url'];
-  Map getInitialState() {
-    return {'data': []};
-  }
+  get pollInterval => props['pollInterval'];
   
-  void componentDidMount(rootNode) {
+  void loadCommentsFromServer() {
     HttpRequest.getString(url)
         .then((String contents) {
           setState({'data': JSON.decode(contents)});
         })
         .catchError((Error error) {
-          window.alert('HttpRequest error');
+          print("Request to ${url} failed with error: ${error.toString}");
         });
   }
   
+  void handleCommentSubmit(comment) {
+    List comments = state['data'];
+    List newComments = comments..addAll([comment]);
+    setState({'data': newComments});
+    HttpRequest.postFormData(url, comment)
+        .then((HttpRequest req) {
+          setState({'data': JSON.decode(req.response.toString())});
+        })
+        .catchError((error) {
+          print("Request to ${url} failed with error: ${error.toString}");
+        });
+  }
+  
+  Map getInitialState() {
+    return {'data': []};
+  }
+  
+  void componentDidMount(rootNode) {
+    loadCommentsFromServer();
+    new Timer.periodic(new Duration(milliseconds: pollInterval), (Timer timer) => loadCommentsFromServer());
+  }
+  
   render() {
-    return div({'className': 'commentBox'}, [commentList({'data': state['data']}), commentForm({})]);
+    return div({'className': 'commentBox'}, [
+        commentList({'data': state['data']}),
+        commentForm({'onCommentSubmit': handleCommentSubmit})
+    ]);
   }
 }
 
 void main() {
   reactClient.setClientConfiguration();
-  render(commentBox({'url': 'comments.json'}), querySelector('#content'));
+  render(commentBox({'url': 'http://localhost:3000/comments.json', 'pollInterval': 2000}), querySelector('#content'));
 }
